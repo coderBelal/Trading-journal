@@ -1,12 +1,12 @@
 import { useEffect, useState } from "react";
-import { useLocation, useNavigate } from "react-router-dom";
+import { useLocation } from "react-router-dom";
 
 export default function JournalCard() {
   const { state } = useLocation();
   const selectedDate = state?.selectedDate;
 
   const [entries, setEntries] = useState([]);
-  const navigate = useNavigate(); // For navigating back
+  const [selectedCard, setSelectedCard] = useState(null); // ✅ For showing logic
 
   useEffect(() => {
     const stored = JSON.parse(localStorage.getItem("journalEntries")) || [];
@@ -21,6 +21,7 @@ export default function JournalCard() {
     const updated = entries.filter((entry) => entry.date !== dateString);
     setEntries(updated);
     localStorage.setItem("journalEntries", JSON.stringify(updated));
+    setSelectedCard(null); // hide logic if deleted
   };
 
   const currentDate = new Date();
@@ -56,14 +57,16 @@ export default function JournalCard() {
         cells.push(
           <div
             key={i}
-            className={`border p-2 min-h-[80px] sm:min-h-[100px] rounded-md text-sm relative break-words
+            onClick={() => entry && setSelectedCard(entry)} // ✅ on click show logic
+            className={`cursor-pointer border p-2 min-h-[80px] sm:min-h-[100px] rounded-md text-sm relative break-words
               ${
                 entry
                   ? entry.type === "profit"
-                    ? "bg-green-100 border-green-400 text-green-900"
-                    : "bg-red-100 border-red-400 text-red-900"
-                  : "bg-white border-gray-300 text-gray-800"
+                    ? "bg-green-300 border-green-600  "
+                    : "bg-red-300 border-red-600"
+                  : "border-zinc-700 text-black"
               }
+              ${isSelected ? "ring-2 ring-yellow-300" : ""}
             `}
           >
             <div className="font-semibold text-xs sm:text-sm">{displayDate}</div>
@@ -78,8 +81,11 @@ export default function JournalCard() {
 
             {entry && (
               <button
-                onClick={() => deleteEntry(formattedDate)}
-                className="absolute top-1 right-1 text-red-600 hover:text-red-400 text-xs"
+                onClick={(e) => {
+                  e.stopPropagation(); // Prevent opening logic popup
+                  deleteEntry(formattedDate);
+                }}
+                className="absolute top-1 right-1 text-red-400 hover:text-red-200 text-xs"
                 title="Delete Entry"
               >
                 🗑️
@@ -91,7 +97,7 @@ export default function JournalCard() {
         cells.push(
           <div
             key={i}
-            className="border p-2 min-h-[80px] sm:min-h-[100px] bg-white rounded-md border-gray-300"
+            className="border p-2 min-h-[80px] sm:min-h-[100px] bg-white rounded-md border-zinc-700"
           ></div>
         );
       }
@@ -101,20 +107,27 @@ export default function JournalCard() {
   };
 
   return (
-    <div className="p-4 max-w-6xl mx-auto bg-white rounded-lg min-h-screen">
-      {/* Back Button */}
-      <button
-        onClick={() => navigate(-1)}
-        className="mb-4 px-4 py-2 bg-gray-200 hover:bg-gray-300 text-gray-800 rounded shadow"
-      >
-        ← Back
-      </button>
-
-      <h2 className="text-xl text-gray-800 font-semibold mb-4 text-center">
+    <div className="p-4 max-w-6xl mx-auto bg-white rounded-lg min-h-screen relative">
+      <h2 className="text-xl text-black font-semibold mb-4 text-center">
         {currentDate.toLocaleString("en-US", { month: "long", year: "numeric" })}
       </h2>
-
       <div className="grid grid-cols-7 gap-1 sm:gap-2">{generateCalendarCells()}</div>
+
+      {/* ✅ Show trading logic popup */}
+      {selectedCard && (
+        <div className="fixed top-0 left-0 w-full h-full bg-black/50 flex items-center justify-center z-50">
+          <div className="bg-white p-6 rounded-lg shadow-lg max-w-md w-full relative">
+            <button
+              onClick={() => setSelectedCard(null)}
+              className="absolute top-2 right-3 text-gray-500 hover:text-black text-xl"
+            >
+              &times;
+            </button>
+            <h3 className="text-lg font-bold mb-2 text-gray-800">Trading Logic</h3>
+            <p className="text-gray-700 whitespace-pre-wrap">{selectedCard.tradingLogic || "No logic provided."}</p>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
